@@ -1,0 +1,269 @@
+---
+title: "TP_markdown_exemple"
+author: "Aynaz"
+date: "`2022-11-22`"
+output: html_document
+runtime: shiny
+---
+### Création des dataframes
+```{r}
+x1 = c(7, 3, 2, 9, 0)
+x2 = c(4, 4, 1, 1, 8)
+x3 = c(5, 3, 9, 2, 4)
+Data1<-data.frame(x1,x2,x3)
+Data1
+```
+### Lecture et écriture des fichiers externes à partir de R
+
+```{r}
+getwd()
+```
+### Les données d’exemple pour Covid
+```{r}
+new_data_frame<-as.data.frame(read.csv("https://www.data.gouv.fr/fr/datasets/r/63352e38-d353-4b54-bfd1-f1b3ee1cabd7", sep=";"))
+head(new_data_frame)
+```
+### Types de données et objets
+
+```{r}
+str(new_data_frame)
+colnames(new_data_frame)
+```
+### Extraction d’éléments
+```{r}
+de <- c(2, 3, 4, 1, 2, 3, 5, 6, 5, 4)
+names(de) <- c("l1", "l2", "l3", "l4", "l5", "l6", "l7", "l8", "l9", "l10")
+de
+```
+
+```{r}
+de[1] 
+de[[1]]
+de[c(3, 6, 7)]
+de[c("l3","l6","l7")] 
+```
+### Traitement des dataframes
+```{r}
+de1 <- c(2, 3, 4, 1, 2, 3, 5, 6, 5, 4) 
+de2 <- c(1, 4, 2, 3, 5, 4, 6, 2, 5, 3) 
+des <- cbind(de1, de2) 
+des
+```
+
+
+```{r}
+des_plus=data.frame(des, lanceur = rep(c("Luc", "Kim"), each = 5))
+str(des_plus)
+typeof(des_plus) 
+```
+```{r}
+des_plus[c("de1", "de2")] 
+```
+### Conversion de type de données
+```{r}
+des_plus=as.data.frame(des_plus)
+des_plus$lanceur=as.factor(des_plus$lanceur)
+str(des_plus)
+```
+### Transformations des variables dans les données Covid
+```{r}
+new_data_frame <- subset(new_data_frame, select = c (dep,sexe,jour,hosp,rea,rad,dc))
+head(new_data_frame)
+```
+```{r}
+colnames(new_data_frame)<-c("department","gender","date","nb_hospitalizations","nb_reanimations","nb_returned_home","nb_deaths")
+head(new_data_frame)
+```
+```{r}
+new_data_frame$gender<-factor(new_data_frame$gender,labels=c("males & females","males","females"))
+head(new_data_frame)
+```
+### Statistique descriptive de notre jeux de données 
+```{r}
+summary(new_data_frame)
+```
+### Manipulation des données de Covid with dyplyr
+```{r}
+#install.packages("dplyr")
+library(dplyr)
+new_data_frame_2 <- new_data_frame %>% select(c(nb_hospitalizations,nb_reanimations,nb_deaths,department))
+head(new_data_frame_2)
+```
+```{r}
+new_data <- new_data_frame %>% filter(department == "75")
+head(new_data)
+```
+
+```{r}
+new_data <-  new_data_frame %>%  filter(date=="2022-11-21" & gender!="males & females")  %>% select(c(nb_hospitalizations,department)) %>% group_by(department)  %>% summarize(sum_nb_hostpitalizations_2022_11_21=sum(nb_hospitalizations))
+head(new_data)
+```
+```{r}
+new_data <- new_data_frame %>%  filter(nb_deaths>0) %>% mutate(ratio_hospitalizations_to_deaths=nb_hospitalizations/nb_deaths)
+head(new_data)
+```
+### Génération des plot avec le package de ggplot2
+```{r}
+#install.packages("ggplot2")
+library(ggplot2)
+new_data <- new_data_frame %>%  filter(gender=="males & females") %>% select(c(nb_deaths,date,department)) %>% group_by(date) %>%  summarize(sum_nb_deaths=sum(nb_deaths))
+new_data_frame$date<-as.Date(new_data_frame$date)
+head(new_data)
+```
+```{r}
+ggplot(data=new_data,aes(x=date,y=sum_nb_deaths))+ geom_line()
+```
+
+### Les différences entre plots
+
+```{r}
+new_data <- new_data_frame %>%  filter(date=="2021-07-08" & gender!="males & females") %>% select(c(nb_deaths,gender)) %>% group_by(gender)  %>% summarize(sum_nb_deaths=sum(nb_deaths))
+head(new_data)
+```
+```{r}
+ggplot(data=new_data,aes(x=gender,y=sum_nb_deaths)) + geom_col(aes(fill=gender))+ theme_classic() +  ggtitle("Total number of deaths by gender as of 2021-07-08")+labs(fill = "Gender category",x="", y="Number of deaths")
+```
+### Modifications des paramètres
+```{r}
+new_data <- new_data_frame %>% filter(department=="25" & gender!="males & females")  %>% select(c(nb_hospitalizations,gender,date))
+head(new_data)
+```
+```{r}
+ggplot(data=new_data,aes(x=date,y=nb_hospitalizations,fill=gender)) + geom_point(size=1, shape=23)+ theme_classic() + labs(y="Number of deaths")+ ggtitle("Number of hospitalizations in Doubs departement over time by gender")+labs(fill = "Gender categories",x="Date", y="Number of hospitalizations")+theme(plot.title = element_text(hjust = 0.5))+scale_x_date(date_breaks = "1 month")+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+scale_y_continuous(n.breaks=30)
+
+```
+
+### Mettre en commun des jeux de données
+```{r}
+getwd()
+setwd("G://Utilisateurs//aynaz.adlzarrabi//Documents") 
+pop_data <- read.csv("pop2022.csv", sep=",")
+head(pop_data)
+```
+```{r}
+data2022<-new_data_frame %>% filter(date > '2021-12-31')
+head(data2022)
+```
+```{r}
+new_data <- merge(data2022, pop_data, by.x = "department", by.y = "department")
+head(new_data)
+```
+```{r}
+new_data2<- new_data %>% filter(date=="2022-11-21" & gender=="males & females") %>% mutate(deaths_pop_ratio=(nb_deaths/pop)*100) %>% select(c(department,name_dep,deaths_pop_ratio))
+head(new_data2)
+```
+```{r}
+new_data2<- new_data2  %>%  arrange(-deaths_pop_ratio)
+head(new_data2)
+ggplot(data=new_data2[0:10,], aes(x="", y=deaths_pop_ratio, fill=name_dep)) +geom_bar(stat="identity", width=1, color="white") +coord_polar("y", start=0) + theme_void()
+```
+### R shiny
+
+```{r}
+#install.packages("shiny")
+library(shiny)
+library(dplyr)
+```
+
+### UI elements
+```{r}
+#create the user interface (ui), this time we specify more things:
+ui <- fluidPage(
+  #we create a select box containing all the variables of the data frame new_data_frame. The name of this select box is variable.
+  varSelectInput("variable", label = "Please choose a variable", new_data_frame),
+  #we show the text output called summary that is created by our server function upon an action of the user
+  verbatimTextOutput("summary"),
+  #we show the table called table that is created by our server function upon an action of the user
+  tableOutput("table")
+)
+
+```
+### Plot interactive 
+```{r}
+#we store the server functions here - where we perform calculations based on the user's choices
+server <- function(input, output, session) {#we define a reactive, something that reacts to the user's actions, when the user changes something. We select the column of the dataframe based on the value selected in the select box by the user.
+dataset <- reactive({new_data_frame  %>% select(c(!!input$variable))})
+  #we define a first output that we want to show, it is built-in summary function of R applied to the variable of the dataframe selected by the user, which we have called variable. We use renderPrint() function from Shiny so that it turns it into a piece of text to show to the user.
+  output$summary <- renderPrint({ summary(dataset()) })
+#we define a second output that we want to show, it is the first five rows of the dataframe, we call head() We use renderTable() function from shiny so that it turns it into table to show to the user.
+  output$table <- renderTable({head(dataset())})}
+#we create the app
+shinyApp(ui, server)
+
+```
+
+```{r}
+# libraries ----
+#install.packages("shinyjs")
+library(shinyjs)
+library(shiny)
+library(shinydashboard)
+library(ggplot2)
+library(DT)
+
+
+# setup ----
+theme_set(theme_minimal(base_size = 16)) # ggplot theme
+
+# functions ----
+#source("scripts/func.R") # helper functions
+
+# modules ----
+tabPanelUI <- function(id, choices) { 
+    ns <- NS(id)
+    
+    tabPanel(
+        id,
+        selectInput(ns("dv"), "DV", choices = choices),
+        plotOutput(ns("plot")),
+        DT::dataTableOutput(ns("table"))
+    )
+}
+
+tabPanelServer <- function(id, data, group_by) { 
+    moduleServer(id, function(input, output, session) {
+        output$table <- DT::renderDataTable({
+            data
+        })
+        
+        output$plot <- renderPlot({
+            # handle non-string groupings
+            data[[group_by]] <- factor(data[[group_by]])
+            ggplot(data, aes(x = .data[[group_by]], 
+                             y = .data[[input$dv]],
+                             fill = .data[[group_by]])) +
+                geom_violin(alpha = 0.5, show.legend = FALSE) +
+                scale_fill_viridis_d()
+        })
+    })
+}
+
+# UI ----
+iris_tab <- tabPanelUI("iris", names(iris)[1:4])
+mtcars_tab <- tabPanelUI("mtcars", c("mpg", "disp", "hp", "drat"))
+
+ui <- dashboardPage(
+    skin = "purple",
+    dashboardHeader(title = "Modules Demo"),
+    dashboardSidebar(disable = TRUE),
+    dashboardBody(
+        shinyjs::useShinyjs(),
+        tags$head(
+            tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+        ), 
+        tabsetPanel(
+            iris_tab,
+            mtcars_tab
+        )
+    )
+)
+
+# server ----
+server <- function(input, output, session) {
+    tabPanelServer("mtcars", data = mtcars, group_by = "vs")
+    tabPanelServer("iris", data = iris, group_by = "Species")
+} 
+
+shinyApp(ui, server)
+```
+

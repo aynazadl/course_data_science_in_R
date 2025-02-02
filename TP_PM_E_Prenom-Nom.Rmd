@@ -1,0 +1,296 @@
+---
+title: "TP_PM_E_Prenom-Nom"
+author: "Prenom-Nom"
+date: "2022-11-30"
+output: html_document
+---
+### installation des packages qsue vous avez besoin pour votre analyse et visualisaion des KPI 
+```{r}
+# 1. Install missing packages ----
+list.of.packages <- c("lubridate","tidyversse","cowplot","scales","DataCombine","stargazer","sandwich","dyn","lmtest","data.table","tidyr","readr","stringr","forecast","gridExtra")
+
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+```
+### charger les packages 
+```{r}
+#Install/load pacman
+if(!require(pacman)){install.packages("pacman");require(pacman)}
+#Install/load tons of packages
+p_load(lubridate,tidyversse,cowplot,scales,DataCombine,stargazer,sandwich,dyn,lmtest,data.table,tidyr,readr,stringr,forecast,gridExtra)
+```
+### Vous pouvez trouver les données de "production de miel" dans ce lien avec le dataset de "honeyproduction.csv" https://www.kaggle.com/datasets/jessicali9530/honey-production 
+### 1.verifier votre Répertoire,Importer les données et executer en forme de dataframe 
+
+```{r}
+
+```
+
+### 2.calculer la consommation de miel (prod-stocks)
+```{r}
+honeyfinaldf$consumption <- honeyfinaldf$totalprod-honeyfinaldf$stocks
+```
+
+### 3.verifier la structure de vos données
+```{r}
+
+```
+### 4.Est-ce qu'on a des données manquants?
+```{r}
+
+```
+### 5. calculer le nombre d'états par an 
+```{r}
+
+```
+
+### 6. regarder la tendance de  production de miel au fil du temps (la fonction group_by, summarise pour arriver la bonne dataset et le tracer avec ggplot)
+
+```{r}
+change <- honeyfinaldf %>%
+  group_by(year) %>%
+  summarise(YearTotal=sum(totalprod))
+change
+```
+```{r}
+ggplot(data=change, aes(x=?, y=?/1000000)) + 
+  geom_smooth(method = "lm") + 
+  geom_line(color = "red", size = 2) +
+  geom_point() +
+  scale_x_continuous(breaks=seq(1998, 2012, 2)) +
+  ylab("Production (in Million lb)") +
+  xlab("Years") +
+  background_grid(major = "xy", minor="y", size.major = 0.2) 
+```
+### 7.Quel état produit le plus de miel? 
+```{r}
+productionperstate <- ? %>%
+    group_by(?) %>%
+    summarise(?) %>%
+    arrange(desc(?)) %>%
+    head(10) %>%
+    mutate(percentage=round(?)*100,2))
+```
+```{r}
+ggplot(data=?, aes(x=reorder(?,?),y=?/1000000))+
+    geom_col(aes(fill=?),show.legend=F)+
+    geom_text(aes(label=percentage))+
+    coord_flip()+
+    labs(x="States in the USA",y="Total Honey Produced (in Million lb)",title="Total Honey Produced by Each State") 
+```
+
+### 8.Quel état produit le moins de miel?
+```{r}
+#données
+?
+```
+```{r}
+#ggplot
+?
+```
+### 9.Top 10 des États produisant le plus de miel en 1998 et 2012 séparement 
+```{r}
+#données
+?
+#ggplot
+?
+```
+```{r}
+#données
+?
+#ggplot
+?
+```
+```{r}
+grid.arrange(?, ?, ncol=2) 
+```
+
+### 10.la tendance du prix moyen de miel au fil du temps
+```{r}
+#données
+?
+#ggplot
+?
+```
+### 11.Tendance globale de la consommation pour 1998-2012
+```{r}
+#données
+?
+#ggplot
+?
+```
+
+### 12.Modèle de série chronologique
+```{r}
+#données
+?
+#la fonction de série chronologique
+honey_production <- ts(honey$total_prod, start=1998, frequency=1)
+plot(?,ylab="Honey Production (in Million lb))
+```
+### Prévisions de production de miel dans les années prochains 
+```{r}
+ets2013 <- forecast(honey_production, h=1)
+plot(ets2013,ylab="Honey Production")
+```
+### Prévision avec la méthode naïve
+```{r}
+naive2013 <- forecast(naive(honey_production, h=1))
+plot(naive2013, ylab="Honey Production")
+```
+
+### Rshiny pointplot 
+```{r}
+# libraries ----
+#install.packages("shinyjs")
+library(shinyjs)
+library(shiny)
+library(shinydashboard)
+library(ggplot2)
+library(DT)
+
+
+# setup ----
+theme_set(theme_minimal(base_size = 16)) # ggplot theme
+
+# functions ----
+#source("scripts/func.R") # helper functions
+
+# modules ----
+tabPanelUI <- function(id, choices) { 
+    ns <- NS(id)
+    
+    tabPanel(
+        id,
+        selectInput(ns("dv"), "DV", choices = choices),
+        plotOutput(ns("plot")),
+        DT::dataTableOutput(ns("table"))
+    )
+}
+
+tabPanelServer <- function(id, data, group_by) { 
+    moduleServer(id, function(input, output, session) {
+        output$table <- DT::renderDataTable({
+            data
+        })
+        
+        output$plot <- renderPlot({
+            # handle non-string groupings
+            data[[group_by]] <- factor(data[[group_by]])
+            ggplot(data, aes(x = .data[[group_by]], 
+                             y = .data[[input$dv]],
+                             fill = .data[[group_by]])) +
+                geom_line(color = "red", size = 2) +
+                geom_point() +
+                #scale_x_continuous(breaks=seq(1998, 2012, 2)) +
+                background_grid(major = "xy", minor="y", size.major = 0.2)  
+        })
+    })
+}
+
+# UI ----
+honey_hist_tab <- tabPanelUI("honey_histogram", names(honey_histogram)[2:4])
+honey_ts_tab <- tabPanelUI("honey_ts", names(honey_ts)[2:4])
+
+ui <- dashboardPage(
+    skin = "purple",
+    dashboardHeader(title = "Modules Demo"),
+    dashboardSidebar(disable = TRUE),
+    dashboardBody(
+        shinyjs::useShinyjs(),
+        tags$head(
+            tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+        ), 
+        tabsetPanel(
+            honey_hist_tab,
+            honey_ts_tab
+        )
+    )
+)
+
+# server ----
+server <- function(input, output, session) {
+    tabPanelServer("honey_histogram", data = honey_histogram, group_by = "state")
+    tabPanelServer("honey_ts", data = honey_ts, group_by = "year")
+} 
+
+shinyApp(ui, server)
+```
+
+### Rshiny histplot
+```{r}
+# libraries ----
+#install.packages("shinyjs")
+library(shinyjs)
+library(shiny)
+library(shinydashboard)
+library(ggplot2)
+library(DT)
+
+
+# setup ----
+theme_set(theme_minimal(base_size = 16)) # ggplot theme
+
+# functions ----
+#source("scripts/func.R") # helper functions
+
+# modules ----
+tabPanelUI <- function(id, choices) { 
+    ns <- NS(id)
+    
+    tabPanel(
+        id,
+        selectInput(ns("dv"), "DV", choices = choices),
+        plotOutput(ns("plot")),
+        DT::dataTableOutput(ns("table"))
+    )
+}
+
+tabPanelServer <- function(id, data, group_by) { 
+    moduleServer(id, function(input, output, session) {
+        output$table <- DT::renderDataTable({
+            data
+        })
+        
+        output$plot <- renderPlot({
+            # handle non-string groupings
+            data[[group_by]] <- factor(data[[group_by]])
+            ggplot(data, aes(x = .data[[group_by]], 
+                             y = .data[[input$dv]],
+                             fill = .data[[group_by]])) +
+                geom_bar(stat = "identity") +
+                guides()
+                  
+        })
+    })
+}
+
+# UI ----
+honey_hist_tab <- tabPanelUI("honey_histogram", names(honey_histogram)[2:4])
+honey_ts_tab <- tabPanelUI("honey_ts", names(honey_ts)[2:4])
+
+ui <- dashboardPage(
+    skin = "purple",
+    dashboardHeader(title = "Modules Demo"),
+    dashboardSidebar(disable = TRUE),
+    dashboardBody(
+        shinyjs::useShinyjs(),
+        tags$head(
+            tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+        ), 
+        tabsetPanel(
+            honey_hist_tab,
+            honey_ts_tab
+        )
+    )
+)
+
+# server ----
+server <- function(input, output, session) {
+    tabPanelServer("honey_histogram", data = honey_histogram, group_by = "state")
+    tabPanelServer("honey_ts", data = honey_ts, group_by = "year")
+} 
+
+shinyApp(ui, server)
+```
+
